@@ -4,9 +4,13 @@ go 1.23
 
 require (
 	github.com/XSAM/otelsql v0.37.0
+	github.com/alicebob/miniredis/v2 v2.34.0
+	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/grafana/otel-profiling-go v0.5.1
 	github.com/grafana/pyroscope-go v1.2.0
 	github.com/labstack/echo/v4 v4.13.3
+	github.com/redis/go-redis/extra/redisotel/v9 v9.7.1
+	github.com/redis/go-redis/v9 v9.7.1
 	go.opentelemetry.io/contrib/bridges/otelslog v0.9.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.59.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0
@@ -24,7 +28,10 @@ require (
 )
 
 require (
+	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
@@ -37,9 +44,11 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
+	github.com/redis/go-redis/extra/rediscmd/v9 v9.7.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/log v0.10.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect

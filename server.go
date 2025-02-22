@@ -20,15 +20,18 @@ type Todo struct {
 	Done bool   `json:"done"`
 }
 
-var (
-	logger           *slog.Logger
-	otelCollectorURL = "otel.local"
-	baseUrl          = "http://localhost:8080"
-)
+var logger *slog.Logger
 
-func registerRoutes(e *echo.Echo, db DB, counter metric.Int64Counter, tracerProvider trace.TracerProvider) {
+func registerRoutes(
+	e *echo.Echo,
+	db DB,
+	redis RedisClient,
+	counter metric.Int64Counter,
+	tracerProvider trace.TracerProvider,
+) {
 	e.Use(middleware.Recover())
-	e.Use(otelecho.Middleware("a", otelecho.WithTracerProvider(otelpyroscope.NewTracerProvider(tracerProvider))))
+	e.Use(otelecho.Middleware("server", otelecho.WithTracerProvider(otelpyroscope.NewTracerProvider(tracerProvider))))
+	e.Use(RateLimiterMiddleware(redis))
 
 	e.GET("/todos", getTodos(db, counter))
 	e.POST("/todos", addTodo(db, counter))
@@ -47,7 +50,7 @@ func getTodos(db DB, counter metric.Int64Counter) func(c echo.Context) error {
 
 		todos, err := db.FetchAllTodos(ctx)
 		if err != nil {
-			logger.ErrorContext(ctx, "Error while fetching todos", err)
+			logger.ErrorContext(ctx, "Error while fetching todos", "error", err)
 
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -72,7 +75,7 @@ func addTodo(db DB, counter metric.Int64Counter) func(c echo.Context) error {
 
 		err := db.AddTodo(ctx, todo.Task, todo.Done)
 		if err != nil {
-			logger.ErrorContext(ctx, "Error while adding todo", todo, err)
+			logger.ErrorContext(ctx, "Error while adding todo", "error", err, "todo", todo)
 
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -80,7 +83,7 @@ func addTodo(db DB, counter metric.Int64Counter) func(c echo.Context) error {
 		// fake slowness
 		time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
 
-		logger.InfoContext(ctx, "Added new todo with context", "todo", todo)
+		logger.InfoContext(ctx, "Added new todo", "todo", todo)
 
 		return c.JSON(http.StatusCreated, todo)
 	}

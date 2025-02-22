@@ -2,10 +2,15 @@ package main
 
 import (
 	"context"
-	
+
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel/metric"
+)
+
+var (
+	otelCollectorURL = "otel.local"
+	baseUrl          = "http://localhost:8080"
 )
 
 func main() {
@@ -86,7 +91,12 @@ func main() {
 		panic(err)
 	}
 
-	registerRoutes(e, db, counter, tracerProvider)
+	redis, err := NewRedis(tracerProvider, meterProvider)
+	if err != nil {
+		panic(err)
+	}
+
+	registerRoutes(e, db, redis, counter, tracerProvider)
 
 	logger.Info("Server running on :8080")
 
