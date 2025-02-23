@@ -44,7 +44,7 @@ func getTodos(db DB, counter metric.Int64Counter) func(c echo.Context) error {
 		counter.Add(ctx, 1)
 
 		// fake slowness
-		time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+		time.Sleep(time.Duration(rand.Intn(2)) * time.Second)
 
 		logger.InfoContext(ctx, "Handling GET /todos request")
 
@@ -82,7 +82,7 @@ func addTodo(db DB, counter metric.Int64Counter) func(c echo.Context) error {
 		}
 
 		// fake slowness
-		time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+		time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
 
 		logger.InfoContext(ctx, "Added new todo", "todo", todo)
 

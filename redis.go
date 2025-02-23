@@ -12,7 +12,8 @@ import (
 )
 
 type RedisClient struct {
-	client *redis.Client
+	client  *redis.Client
+	limiter *redis_rate.Limiter
 }
 
 type LimiterResponse struct {
@@ -45,13 +46,14 @@ func NewRedis(
 		return RedisClient{}, err
 	}
 
-	return RedisClient{client: client}, client.FlushDB(ctx).Err()
+	return RedisClient{
+		client:  client,
+		limiter: redis_rate.NewLimiter(client),
+	}, client.FlushDB(ctx).Err()
 }
 
 func (r RedisClient) Allow(ctx context.Context, key string) (LimiterResponse, error) {
-	limiter := redis_rate.NewLimiter(r.client)
-
-	res, err := limiter.Allow(ctx, key, redis_rate.PerMinute(10))
+	res, err := r.limiter.Allow(ctx, key, redis_rate.PerMinute(10))
 	if err != nil {
 		return LimiterResponse{}, err
 	}

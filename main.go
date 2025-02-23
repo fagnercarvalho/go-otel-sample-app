@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -21,6 +22,16 @@ func main() {
 		dbServiceName     = "todo-service-db"
 		loggerName        = "server"
 	)
+
+	otelCollectorURLVar := os.Getenv("OTEL_COLLECTOR_URL")
+	if otelCollectorURLVar != "" {
+		otelCollectorURL = otelCollectorURLVar
+	}
+
+	pyroscopeURLVar := os.Getenv("PYROSCOPE_URL")
+	if pyroscopeURLVar != "" {
+		pyroscopeURL = pyroscopeURLVar
+	}
 
 	providers, err := otel.NewProviders(otelCollectorURL, serverServiceName)
 	if err != nil {
