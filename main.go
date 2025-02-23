@@ -2,59 +2,39 @@ package main
 
 import (
 	"context"
+	"strings"
 
 	"github.com/labstack/echo/v4"
+	"go-otel-sample-app/otel"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
-	"go.opentelemetry.io/otel/metric"
-)
-
-var (
-	otelCollectorURL = "otel.local"
-	baseUrl          = "http://localhost:8080"
 )
 
 func main() {
-	setPropagator()
+	otel.SetPropagators()
 
-	serviceName := "todo-service"
+	var (
+		otelCollectorURL  = "otel.local"
+		pyroscopeURL      = "http://pyroscope.local"
+		baseURL           = "http://localhost:8080"
+		serverServiceName = "todo-service"
+		clientServiceName = "todo-service-client"
+		dbServiceName     = "todo-service-db"
+		loggerName        = "server"
+	)
 
-	tracerProvider, err := newTracerProvider(serviceName)
+	providers, err := otel.NewProviders(otelCollectorURL, serverServiceName)
 	if err != nil {
 		panic(err)
 	}
 
 	defer func() {
-		err := tracerProvider.Shutdown(context.Background())
+		err := providers.Shutdown(context.Background())
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	loggerProvider, err := newLoggerProvider(serviceName)
-	if err != nil {
-		panic(err)
-	}
-
-	defer func() {
-		err := loggerProvider.Shutdown(context.Background())
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	meterProvider, err := newMeterProvider(serviceName)
-	if err != nil {
-		panic(err)
-	}
-
-	defer func() {
-		err := meterProvider.Shutdown(context.Background())
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	profiler, err := startProfiler()
+	profiler, err := startProfiler(pyroscopeURL, serverServiceName)
 	if err != nil {
 		panic(err)
 	}
@@ -66,41 +46,33 @@ func main() {
 		}
 	}()
 
-	logger = otelslog.NewLogger("server", otelslog.WithLoggerProvider(loggerProvider))
-
-	var meter = meterProvider.Meter("github.com/fagnercarvalho/go-otel-sample-app")
-
-	counter, err := meter.Int64Counter(
-		"api.counter",
-		metric.WithDescription("Number of API calls."),
-		metric.WithUnit("{call}"),
+	logger = otelslog.NewLogger(
+		loggerName,
+		otelslog.WithLoggerProvider(providers.LoggerProvider),
 	)
+
+	db, err := NewDB(dbServiceName, providers.TraceProvider, providers.MeterProvider)
+	if err != nil {
+		panic(err)
+	}
+
+	redis, err := NewRedis(providers.TraceProvider, providers.MeterProvider)
+	if err != nil {
+		panic(err)
+	}
+
+	counter, err := providers.GetCounter()
 	if err != nil {
 		panic(err)
 	}
 
 	e := echo.New()
 
-	db, err := NewDB(tracerProvider, meterProvider)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Initialize()
-	if err != nil {
-		panic(err)
-	}
-
-	redis, err := NewRedis(tracerProvider, meterProvider)
-	if err != nil {
-		panic(err)
-	}
-
-	registerRoutes(e, db, redis, counter, tracerProvider)
+	registerRoutes(e, db, redis, counter, providers.TraceProvider)
 
 	logger.Info("Server running on :8080")
 
-	go runClient(baseUrl)
+	go runClient(otelCollectorURL, clientServiceName, baseURL)
 
-	e.Logger.Fatal(e.Start(":8080"))
+	e.Logger.Fatal(e.Start(strings.TrimPrefix(baseURL, "http://")))
 }

@@ -70,7 +70,8 @@ func addTodo(db DB, counter metric.Int64Counter) func(c echo.Context) error {
 		var todo Todo
 		if err := c.Bind(&todo); err != nil {
 			logger.Error("Error binding request", "error", err)
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+
+			return c.NoContent(http.StatusBadRequest)
 		}
 
 		err := db.AddTodo(ctx, todo.Task, todo.Done)

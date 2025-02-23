@@ -16,16 +16,13 @@ type DB struct {
 	db *sql.DB
 }
 
-// histogram_quantile(0.99, rate(http_client_duration_milliseconds_bucket{http_method="POST"}[1m]))
-// 4800 on average (4.8s)
-
-func NewDB(tracerProvider trace.TracerProvider, meterProvider metric.MeterProvider) (DB, error) {
-	db, err := otelsql.Open(
+func NewDB(serviceName string, tracerProvider trace.TracerProvider, meterProvider metric.MeterProvider) (DB, error) {
+	sqlDB, err := otelsql.Open(
 		"sqlite",
 		":memory:",
 		otelsql.WithAttributes(
 			semconv.DBSystemSqlite,
-			semconv.ServiceNameKey.String("todo-service-db"),
+			semconv.ServiceNameKey.String(serviceName),
 		),
 		otelsql.WithTracerProvider(otelpyroscope.NewTracerProvider(tracerProvider)),
 		otelsql.WithMeterProvider(meterProvider),
@@ -34,26 +31,16 @@ func NewDB(tracerProvider trace.TracerProvider, meterProvider metric.MeterProvid
 		return DB{}, err
 	}
 
-	err = otelsql.RegisterDBStatsMetrics(db, otelsql.WithAttributes(
+	err = otelsql.RegisterDBStatsMetrics(sqlDB, otelsql.WithAttributes(
 		semconv.DBSystemSqlite,
 	))
 	if err != nil {
 		return DB{}, err
 	}
 
-	return DB{db: db}, nil
-}
+	db := DB{db: sqlDB}
 
-func (handler *DB) Initialize() error {
-	query := `
-	CREATE TABLE IF NOT EXISTS todos (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		task TEXT NOT NULL,
-		done BOOLEAN NOT NULL CHECK (done IN (0, 1))
-	)`
-
-	_, err := handler.db.Exec(query)
-	return err
+	return db, db.initialize()
 }
 
 func (handler *DB) AddTodo(ctx context.Context, task string, done bool) error {
@@ -88,4 +75,16 @@ func (handler *DB) FetchAllTodos(ctx context.Context) ([]Todo, error) {
 
 func (handler *DB) Close() error {
 	return handler.db.Close()
+}
+
+func (handler *DB) initialize() error {
+	query := `
+	CREATE TABLE IF NOT EXISTS todos (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		task TEXT NOT NULL,
+		done BOOLEAN NOT NULL CHECK (done IN (0, 1))
+	)`
+
+	_, err := handler.db.Exec(query)
+	return err
 }
